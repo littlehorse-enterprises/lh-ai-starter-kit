@@ -1,0 +1,7 @@
+Defaulting to user installation because normal site-packages is not writeable
+Collecting redis
+  Downloading redis-5.2.1-py3-none-any.whl.metadata (9.1 kB)
+Requirement already satisfied: async-timeout>=4.0.3 in /home/nikhil/.local/lib/python3.10/site-packages (from redis) (4.0.3)
+Downloading redis-5.2.1-py3-none-any.whl (261 kB)
+Installing collected packages: redis
+Successfully installed redis-5.2.1
