@@ -7,20 +7,14 @@ from langchain_core.output_parsers import StrOutputParser
 from langchain.schema.runnable import RunnablePassthrough,RunnableLambda
 
 from langchain_postgres.vectorstores import PGVector
-from database import COLLECTION_NAME, CONNECTION_STRING
-# from langchain_community.storage import RedisStore
 from cassandra.cluster import Cluster
 from langchain_community.storage import CassandraByteStore
 from langchain.schema.document import Document
 from langchain_openai import OpenAIEmbeddings
 from langchain.retrievers.multi_vector import MultiVectorRetriever
-from pathlib import Path
-from IPython.display import display, HTML
-from base64 import b64decode
-import os, hashlib, shutil, uuid, json, time
+import os, hashlib, uuid, json, time
 import torch, streamlit as st
 import logging
-
 
 from dotenv import load_dotenv
 load_dotenv()
@@ -30,9 +24,6 @@ torch.classes.__path__ = [os.path.join(torch.__path__[0], torch.classes.__file__
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
-
-# Initialize Redis client
-# client = redis.Redis(host="localhost", port=6379, db=0)
 
 # Initialize YCQL client
 cluster = Cluster(['127.0.0.1'])
@@ -54,19 +45,19 @@ def load_pdf_data(file_path):
     logging.info(f"Data ready to be partitioned and loaded ")
     raw_pdf_elements = partition_pdf(
         filename=file_path,
-      
         infer_table_structure=True,
-        strategy = "hi_res",
-        
-        extract_image_block_types = ["Image"],
-        extract_image_block_to_payload  = True,
-
+        strategy="fast",
+        extract_image_block_types=["Image"],
+        extract_image_block_to_payload=True,
         chunking_strategy="by_title",     
         mode='elements',
         max_characters=10000,
         new_after_n_chars=5000,
         combine_text_under_n_chars=2000,
         image_output_dir_path="data/",
+        ocr_languages="eng",  # Specify English language for OCR
+        ocr_mode="entire_page",  # Process entire page for OCR
+        skip_infer_table_types=["pdf", "jpg", "png"],  # Skip table inference for images
     )
     logging.info(f"Pdf data finish loading, chunks now available!")
     return raw_pdf_elements
@@ -107,8 +98,8 @@ def initialize_retriever():
     id_key = "doc_id"
     vectorstore = PGVector(
             embeddings=OpenAIEmbeddings(),
-            collection_name=COLLECTION_NAME,
-            connection=CONNECTION_STRING,
+            collection_name="document_embeddings",
+            connection="postgresql+psycopg://yugabyte:yugabyte@localhost:5433/yugabyte",
             use_jsonb=True,
             )
     retrieval_loader = MultiVectorRetriever(vectorstore=vectorstore, docstore=store, id_key="doc_id")
@@ -320,11 +311,6 @@ def main():
                 st.session_state.messages.append({"role": "assistant", "content": response_msg_with_duration})
                 st.write(f"Duration: {duration:.2f} seconds")
                 logging.info(f"Response: {response_message}, Duration: {duration:.2f} s")
-
-
-    
-
-
 
 if __name__ == "__main__":
     main()
